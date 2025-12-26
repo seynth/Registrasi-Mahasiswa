@@ -1,0 +1,575 @@
+PENJELASAN `regmhs.h`
+
+1. Header Guard dan Inklusi Library
+```cpp
+#ifndef REGISTRASI_H
+#define REGISTRASI_H
+
+#include <iostream>
+#include <string>
+using namespace std;
+```
+- Lines 1-3: Header guard untuk mencegah kompilasi berulang file header yang sama
+- Lines 5-6: Mengimpor library input/output dan string handling
+- Line 7: Menggunakan namespace std untuk mempersingkat penulisan kode
+
+ 2. Struktur Data `MataKuliah` (Single Linked List)
+```cpp
+struct MataKuliah {
+    string kode;        // Kode unik mata kuliah
+    string nama;        // Nama mata kuliah
+    int sks;           // Jumlah SKS (integer)
+    int tingkat;       // Tingkat/kelas (integer)
+    int jumlahPeminat; // Counter jumlah mahasiswa yang mengambil (integer)
+    MataKuliah* next;  // Pointer ke node berikutnya (SLL)
+};
+```
+- Lines 9-16: Mendefinisikan struktur data untuk mata kuliah sebagai node SLL
+- Lines 10-11: Atribut string untuk identifikasi
+- Lines 12-14: Tiga atribut integer sesuai spesifikasi
+- Line 15: Pointer next untuk membentuk linked list
+
+### 3. Struktur Data `Relasi` (Single Linked List)
+```cpp
+struct Relasi {
+    MataKuliah* mataKuliah; // Pointer ke data mata kuliah
+    string semester;        // Semester pengambilan
+    Relasi* next;          // Pointer ke relasi berikutnya (SLL)
+};
+```
+- Lines 19-23: Struktur untuk menghubungkan mahasiswa dengan mata kuliah
+- Line 20: Pointer ke parent (mata kuliah)
+- Line 21: Atribut string untuk semester
+- Line 22: Pointer next untuk linked list relasi
+
+### 4. truktur Data `Mahasiswa` (Single Linked List)
+```cpp
+struct Mahasiswa {
+    string nim;          // Nomor induk mahasiswa
+    string nama;        // Nama lengkap mahasiswa
+    string jurusan;     // Program studi/jurusan
+    Relasi* relasiHead; // Pointer ke list relasi (child nodes)
+    Mahasiswa* next;    // Pointer ke mahasiswa berikutnya (SLL)
+};
+```
+- Lines 26-32: Struktur utama untuk data mahasiswa
+- Lines 27-29: Tiga atribut string untuk identifikasi
+- Line 30: Pointer ke head list relasi (child nodes)
+- Line 31: Pointer next untuk linked list mahasiswa
+
+### 5. Deklarasi Fungsi Inisialisasi
+```cpp
+void initMahasiswa(Mahasiswa*& head);
+void initMataKuliah(MataKuliah*& head);
+```
+- Lines 35-36: Fungsi untuk menginisialisasi list kosong
+
+### 6. Deklarasi Fungsi Operasi Mahasiswa
+```cpp
+void tambahMahasiswa(Mahasiswa*& head, string nim, string nama, string jurusan);
+void hapusMahasiswa(Mahasiswa*& head, string nim);
+Mahasiswa* cariMahasiswa(Mahasiswa* head, string nim);
+void tampilkanSemuaMahasiswa(Mahasiswa* head);
+void tampilkanMahasiswaByMataKuliah(Mahasiswa* head, string kodeMataKuliah);
+```
+- Lines 39-43: Operasi CRUD untuk data mahasiswa
+- Line 39: Insert data mahasiswa (Menu 1)
+- Line 40: Delete data mahasiswa (Menu 4)
+- Line 41: Search mahasiswa berdasarkan NIM
+- Line 42: Show all mahasiswa (Menu 6)
+- Line 43: Show mahasiswa berdasarkan mata kuliah tertentu (Menu 7)
+
+### 7. Deklarasi Fungsi Operasi Mata Kuliah
+```cpp
+void tambahMataKuliah(MataKuliah*& head, string kode, string nama, int sks, int tingkat);
+void hapusMataKuliah(Mahasiswa*& headMahasiswa, MataKuliah*& headMataKuliah, string kode);
+MataKuliah* cariMataKuliah(MataKuliah* head, string kode);
+void tampilkanSemuaMataKuliah(MataKuliah* head);
+```
+- Lines 46-49: Operasi CRUD untuk data mata kuliah
+- Line 46: Insert data mata kuliah (Menu 2)
+- Line 47: Delete data mata kuliah dengan cleanup relasi (Menu 5)
+- Line 48: Search mata kuliah berdasarkan kode
+- Line 49: Show all mata kuliah (Menu 7)
+
+### 8. Deklarasi Fungsi Operasi Relasi
+```cpp
+void tambahRelasi(Mahasiswa* headMahasiswa, MataKuliah* headMataKuliah, 
+                  string nim, string kodeMataKuliah, string semester);
+void tampilkanMataKuliahByMahasiswa(Mahasiswa* head, string nim);
+void tampilkanStatistikPeminat(MataKuliah* head);
+```
+- Lines 52-55: Operasi untuk relasi many-to-many
+- Lines 52-53: Menghubungkan mahasiswa dengan mata kuliah (Menu 3)
+- Line 54: Show mata kuliah yang diambil mahasiswa tertentu (Menu 8)
+- Line 55: Show statistik peminat (Menu 9)
+
+### 9. Penutup Header Guard
+```cpp
+#endif
+```
+- Line 57: Menutup header guard
+
+---
+
+
+
+PENJELASAN `regmhs.cpp`
+
+
+
+### 1. Inisialisasi Data Structures
+```cpp
+void initMahasiswa(Mahasiswa*& head) {
+    head = nullptr;
+}
+
+void initMataKuliah(MataKuliah*& head) {
+    head = nullptr;
+}
+```
+- Lines 3-7: Menginisialisasi pointer head ke nullptr (list kosong)
+- Parameter `*& head`: Reference to pointer agar perubahan head di dalam fungsi memengaruhi variabel asli
+
+### 2. Fungsi `tambahMahasiswa` - Insert Mahasiswa (Menu 1)
+```cpp
+void tambahMahasiswa(Mahasiswa*& head, string nim, string nama, string jurusan) {
+    Mahasiswa* baru = new Mahasiswa;  // Alokasi memori untuk node baru
+    baru->nim = nim;                   // Isi atribut NIM
+    baru->nama = nama;                 // Isi atribut nama
+    baru->jurusan = jurusan;           // Isi atribut jurusan
+    baru->relasiHead = nullptr;        // Inisialisasi list relasi kosong
+    baru->next = nullptr;              // Set pointer next ke null
+    
+    if (head == nullptr) {             // Jika list kosong
+        head = baru;                   // Node baru menjadi head
+    } else {                           // Jika list tidak kosong
+        Mahasiswa* temp = head;
+        while (temp->next != nullptr) { // Traverse ke node terakhir
+            temp = temp->next;
+        }
+        temp->next = baru;             // Tambah node baru di akhir
+    }
+    // INSERT LAST: Menambahkan node di akhir list
+}
+```
+
+### 3. Fungsi `cariMahasiswa` - Search Parent
+```cpp
+Mahasiswa* cariMahasiswa(Mahasiswa* head, string nim) {
+    Mahasiswa* temp = head;
+    while (temp != nullptr) {          // Traverse seluruh list
+        if (temp->nim == nim) {        // Jika NIM cocok
+            return temp;               // Kembalikan pointer ke node
+        }
+        temp = temp->next;             // Pindah ke node berikutnya
+    }
+    return nullptr;                    // Tidak ditemukan
+}
+```
+
+### 4. Fungsi `hapusMahasiswa` - Delete Parent dengan Relasi (Menu 4)
+```cpp
+void hapusMahasiswa(Mahasiswa*& head, string nim) {
+    if (head == nullptr) return;      // Validasi list tidak kosong
+    
+    Mahasiswa* hapus = nullptr;
+    
+    // Kasus 1: node yang dihapus adalah head
+    if (head->nim == nim) {
+        hapus = head;
+        head = head->next;           // Update head
+    } else { // Kasus 2: node di tengah/akhir
+        Mahasiswa* temp = head;
+        while (temp->next != nullptr && temp->next->nim != nim) {
+            temp = temp->next;       // Cari node sebelum yang akan dihapus
+        }
+        if (temp->next == nullptr) return; // Tidak ditemukan
+        hapus = temp->next;          // Simpan node yang akan dihapus
+        temp->next = hapus->next;    // By-pass node yang dihapus
+    }
+    
+    // Hapus semua relasi child terlebih dahulu
+    Relasi* relTemp = hapus->relasiHead;
+    while (relTemp != nullptr) {
+        Relasi* hapusRel = relTemp;
+        relTemp = relTemp->next;
+        delete hapusRel;             // Dealokasi memori relasi
+    }
+    
+    delete hapus;                    // Dealokasi memori mahasiswa
+}
+// DELETE FIRST: Berpotensi menghapus dari depan jika head yang dihapus
+```
+
+### 5. Fungsi `tambahMataKuliah` - Insert Mata Kuliah (Menu 2)
+```cpp
+void tambahMataKuliah(MataKuliah*& head, string kode, string nama, int sks, int tingkat) {
+    MataKuliah* baru = new MataKuliah;
+    baru->kode = kode;
+    baru->nama = nama;
+    baru->sks = sks;
+    baru->tingkat = tingkat;
+    baru->jumlahPeminat = 0;          // Inisialisasi counter peminat
+    baru->next = nullptr;
+    
+    if (head == nullptr) {
+        head = baru;
+    } else {
+        MataKuliah* temp = head;
+        while (temp->next != nullptr) {
+            temp = temp->next;
+        }
+        temp->next = baru;            // INSERT LAST
+    }
+}
+```
+
+### 6. Fungsi `hapusMataKuliah` - Delete Child dengan Cleanup Relasi (Menu 5)
+```cpp
+void hapusMataKuliah(Mahasiswa*& headMahasiswa, MataKuliah*& headMataKuliah, string kode) {
+    // Hapus node mata kuliah dari list
+    // ... (logika penghapusan mirip dengan hapusMahasiswa)
+    
+    // Cleanup relasi di semua mahasiswa
+    Mahasiswa* mhsTemp = headMahasiswa;
+    while (mhsTemp != nullptr) {
+        Relasi* rel = mhsTemp->relasiHead;
+        Relasi* prev = nullptr;
+        
+        while (rel != nullptr) {
+            if (rel->mataKuliah->kode == kode) {
+                // Hapus relasi dari list mahasiswa
+                if (prev == nullptr) {
+                    mhsTemp->relasiHead = rel->next;  // Hapus dari depan
+                } else {
+                    prev->next = rel->next;           // Hapus dari tengah/akhir
+                }
+                Relasi* hapusRel = rel;
+                rel = rel->next;
+                delete hapusRel;
+            } else {
+                prev = rel;
+                rel = rel->next;
+            }
+        }
+        mhsTemp = mhsTemp->next;
+    }
+}
+// DELETE CHILD PADA PARENT TERTENTU: Menghapus relasi di semua mahasiswa
+```
+
+### 7. Fungsi `tambahRelasi` - Hubungkan Parent ke Child (Menu 3)
+```cpp
+void tambahRelasi(Mahasiswa* headMahasiswa, MataKuliah* headMataKuliah, 
+                  string nim, string kodeMataKuliah, string semester) {
+    
+    Mahasiswa* mhs = cariMahasiswa(headMahasiswa, nim);      // Cari parent
+    MataKuliah* mk = cariMataKuliah(headMataKuliah, kodeMataKuliah); // Cari child
+    
+    // Validasi data ditemukan
+    if (mhs == nullptr || mk == nullptr) return;
+    
+    // Cek duplikasi relasi
+    Relasi* relTemp = mhs->relasiHead;
+    while (relTemp != nullptr) {
+        if (relTemp->mataKuliah->kode == kodeMataKuliah) return;
+        relTemp = relTemp->next;
+    }
+    
+    // Tambah relasi baru
+    Relasi* baru = new Relasi;
+    baru->mataKuliah = mk;            // Pointer ke child
+    baru->semester = semester;
+    baru->next = nullptr;
+    
+    if (mhs->relasiHead == nullptr) {
+        mhs->relasiHead = baru;       // INSERT FIRST untuk relasi
+    } else {
+        Relasi* temp = mhs->relasiHead;
+        while (temp->next != nullptr) {
+            temp = temp->next;
+        }
+        temp->next = baru;            // INSERT LAST untuk relasi
+    }
+    
+    mk->jumlahPeminat++;              // Update counter peminat
+}
+```
+
+### 8. Fungsi `tampilkanSemuaMahasiswa` - Show All Parent dengan Child Count (Menu 6)
+```cpp
+void tampilkanSemuaMahasiswa(Mahasiswa* head) {
+    Mahasiswa* temp = head;
+    while (temp != nullptr) {
+        int jumlahMK = 0;
+        Relasi* relTemp = temp->relasiHead;
+        
+        // Hitung jumlah child (mata kuliah)
+        while (relTemp != nullptr) {
+            jumlahMK++;
+            relTemp = relTemp->next;
+        }
+        
+        // Tampilkan data parent dengan jumlah child
+        cout << setw(15) << left << temp->nim
+             << setw(25) << left << temp->nama
+             << setw(20) << left << temp->jurusan
+             << setw(20) << left << jumlahMK << endl;
+        
+        temp = temp->next;
+    }
+}
+// HITUNG JUMLAH CHILD: Menghitung mata kuliah per mahasiswa
+```
+
+### 9. Fungsi `tampilkanMataKuliahByMahasiswa` - Cari Child pada Parent Tertentu (Menu 8)
+```cpp
+void tampilkanMataKuliahByMahasiswa(Mahasiswa* head, string nim) {
+    Mahasiswa* mhs = cariMahasiswa(head, nim);  // Cari parent
+    if (mhs == nullptr) return;
+    
+    Relasi* relTemp = mhs->relasiHead;          // Akses list child
+    while (relTemp != nullptr) {
+        MataKuliah* mk = relTemp->mataKuliah;
+        // Tampilkan semua child dari parent tertentu
+        cout << setw(10) << left << mk->kode
+             << setw(30) << left << mk->nama
+             << setw(8) << left << mk->sks
+             << setw(10) << left << mk->tingkat
+             << setw(12) << left << relTemp->semester << endl;
+        relTemp = relTemp->next;
+    }
+}
+```
+
+### 10. Fungsi `tampilkanStatistikPeminat` - Menu 9
+```cpp
+void tampilkanStatistikPeminat(MataKuliah* head) {
+    MataKuliah* terbanyak = head;
+    MataKuliah* tersedikit = head;
+    
+    while (temp != nullptr) {
+        // Cari mata kuliah dengan peminat terbanyak
+        if (temp->jumlahPeminat > terbanyak->jumlahPeminat) {
+            terbanyak = temp;
+        }
+        // Cari mata kuliah dengan peminat tersedikit
+        if (temp->jumlahPeminat < tersedikit->jumlahPeminat) {
+            tersedikit = temp;
+        }
+        temp = temp->next;
+    }
+}
+
+
+
+PENJELASAN `main.cpp`
+
+1. Inklusi Header dan Deklarasi Fungsi Menu
+```cpp
+#include "regmhs.h"
+
+void menu() {
+    cout << "\n=== Sistem Registrasi Mahasiswa ===\n";
+    cout << "1. Tambah data mahasiswa\n";           // Menu 1: Insert parent mahasiswa
+    cout << "2. Tambah data mata kuliah\n";         // Menu 2: Insert parent mata kuliah
+    cout << "3. Tambah relasi (mahasiswa mengambil mata kuliah)\n"; // Menu 3: Connect parent-child
+    cout << "4. Hapus data mahasiswa\n";            // Menu 4: Delete parent mahasiswa
+    cout << "5. Hapus data mata kuliah\n";          // Menu 5: Delete parent mata kuliah
+    cout << "6. Tampilkan semua mahasiswa\n";       // Menu 6: Show all parent mahasiswa
+    cout << "7. Tampilkan semua mata kuliah\n";     // Menu 7: Show all parent mata kuliah
+    cout << "8. Tampilkan mahasiswa berdasarkan mata kuliah\n"; // Menu 8: Show parent by child
+    cout << "9. Tampilkan mata kuliah berdasarkan mahasiswa\n"; // Menu 9: Show child by parent
+    cout << "10. Tampilkan statistik peminat\n";    // Menu 10: Statistik
+    cout << "11. Keluar\n";                         // Menu 11: Exit
+    cout << "Pilih menu (1-11): ";
+}
+```
+- Line 1: Mengimpor semua deklarasi dari header file
+- Lines 3-18**: Menampilkan menu dengan 11 pilihan yang sesuai dengan spesifikasi fungsionalitas
+
+2. Fungsi `main()` - Program Utama
+```cpp
+int main() {
+    Mahasiswa* headMahasiswa = nullptr;     // Inisialisasi list mahasiswa (SLL)
+    MataKuliah* headMataKuliah = nullptr;   // Inisialisasi list mata kuliah (SLL)
+    
+    initMahasiswa(headMahasiswa);           // Set list mahasiswa kosong
+    initMataKuliah(headMataKuliah);         // Set list mata kuliah kosong
+```
+- Lines 21-25: Deklarasi dan inisialisasi struktur data utama
+
+3. Data Dummy untuk Testing
+```cpp
+    // dummy data
+    tambahMahasiswa(headMahasiswa, "20251", "Setyo", "Informatika");       // Parent 1
+    tambahMahasiswa(headMahasiswa, "20252", "Nugroho", "Sistem Informasi"); // Parent 2
+    tambahMahasiswa(headMahasiswa, "20253", "Afiya", "Teknik Komputer");   // Parent 3
+    tambahMahasiswa(headMahasiswa, "20254", "Nadifa", "RPL");              // Parent 4
+    
+    tambahMataKuliah(headMataKuliah, "mk1", "Algoritma Pemrograman", 3, 1); // Child 1
+    tambahMataKuliah(headMataKuliah, "mk2", "Struktur Data", 3, 2);        // Child 2
+    tambahMataKuliah(headMataKuliah, "mk3", "Basis Data", 3, 2);           // Child 3
+    tambahMataKuliah(headMataKuliah, "mk4", "Jaringan Komputer", 3, 3);    // Child 4
+    
+    tambahRelasi(headMahasiswa, headMataKuliah, "20251", "mk1", "2023/2024 Ganjil"); // Relasi 1
+    tambahRelasi(headMahasiswa, headMataKuliah, "20251", "mk2", "2023/2024 Genap");  // Relasi 2
+    tambahRelasi(headMahasiswa, headMataKuliah, "20252", "mk3", "2024/2025 Ganjil"); // Relasi 3
+    tambahRelasi(headMahasiswa, headMataKuliah, "20252", "mk4", "2023/2024 Genap");  // Relasi 4
+    tambahRelasi(headMahasiswa, headMataKuliah, "20253", "mk5", "2024/2025 Ganjil"); // Relasi invalid
+```
+- Lines 28-42: Membuat data awal untuk testing sistem
+- Line 42: Sengaja membuat relasi invalid (mk5 tidak ada) untuk menunjukkan validasi error handling
+
+4. Deklarasi Variabel Input
+```cpp
+    int pilihan;
+    string nim, nama, jurusan, kode, semester;
+    int sks, tingkat;
+```
+- Lines 45-47: Variabel untuk menyimpan input pengguna
+
+5. Loop Menu Utama (do-while)
+```cpp
+    do {
+        menu();                 // Tampilkan menu
+        cin >> pilihan;         // Baca pilihan
+        cin.ignore();           // Clear newline dari buffer
+        
+        switch(pilihan) {       // Proses pilihan
+            // Kasus 1-11 akan dijelaskan di bawah
+        }
+        
+    } while (pilihan != 11);    // Ulangi sampai pilihan 11 (keluar)
+```
+
+6. Menu 1: Tambah Data Mahasiswa (Insert Parent)
+```cpp
+            case 1:
+                cout << "\n++++ Tambah data mahasiswa ++++\n";
+                cout << "NIM: "; getline(cin, nim);
+                cout << "Nama: "; getline(cin, nama);
+                cout << "Jurusan: "; getline(cin, jurusan);
+                tambahMahasiswa(headMahasiswa, nim, nama, jurusan);
+                break;
+```
+- Lines 54-61: Mengambil input dan memanggil fungsi insert parent mahasiswa
+- Spesifikasi (a): Penambahan data mahasiswa 
+
+7. Menu 2: Tambah Data Mata Kuliah (Insert Parent)
+```cpp
+            case 2:
+                cout << "\n++++ Tambah data mata kuliah ++++\n";
+                cout << "Kode: "; getline(cin, kode);
+                cout << "Nama: "; getline(cin, nama);
+                cout << "SKS: "; cin >> sks;
+                cout << "Tingkat (1-4): "; cin >> tingkat;
+                cin.ignore();
+                tambahMataKuliah(headMataKuliah, kode, nama, sks, tingkat);
+                break;
+```
+- Lines 64-73: Mengambil input dan memanggil fungsi insert parent mata kuliah
+- Spesifikasi (b): Penambahan data matakuliah 
+
+8. Menu 3: Tambah Relasi (Connect Parent-Child)
+```cpp
+            case 3:
+                cout << "\n++++ Tambah relasi ++++\n";
+                cout << "NIM Mahasiswa: "; getline(cin, nim);
+                cout << "Kode Mata Kuliah: "; getline(cin, kode);
+                cout << "Semester: "; getline(cin, semester);
+                tambahRelasi(headMahasiswa, headMataKuliah, nim, kode, semester);
+                break;
+```
+- Lines 76-83: Menghubungkan mahasiswa (parent) dengan mata kuliah (child)
+- Spesifikasi (c): Penentuan relasi 
+
+9. Menu 4: Hapus Data Mahasiswa (Delete Parent)
+```cpp
+            case 4:
+                cout << "\n--- Hapus data mahasiswa ---\n";
+                cout << "NIM mahasiswa yang akan dihapus: "; getline(cin, nim);
+                hapusMahasiswa(headMahasiswa, nim);
+                break;
+```
+- Lines 86-90: Menghapus parent mahasiswa beserta semua relasinya
+- Spesifikasi (e): Menghapus data mahasiswa 
+
+10. Menu 5: Hapus Data Mata Kuliah (Delete Parent)
+```cpp
+            case 5:
+                cout << "\n--- Hapus data mata kuliah ---\n";
+                cout << "Kode mata kuliah yang akan dihapus: "; getline(cin, kode);
+                hapusMataKuliah(headMahasiswa, headMataKuliah, kode);
+                break;
+```
+- Lines 93-97: Menghapus parent mata kuliah beserta semua relasinya di semua mahasiswa
+- Spesifikasi (d)**: Menghapus data matakuliah 
+
+11. Menu 6: Tampilkan Semua Mahasiswa
+```cpp
+            case 6:
+                tampilkanSemuaMahasiswa(headMahasiswa);
+                break;
+```
+- Lines 100-102: Menampilkan semua parent mahasiswa dengan jumlah child (mata kuliah)
+- Spesifikasi (f): Tampilkan semua mahasiswa dengan matakuliahnya 
+
+12. Menu 7: Tampilkan Semua Mata Kuliah
+```cpp
+            case 7:
+                tampilkanSemuaMataKuliah(headMataKuliah);
+                break;
+```
+- Lines 105-107: Menampilkan semua parent mata kuliah
+- Show all parent: Fungsi 2 dari 12 fungsionalitas 
+
+13. Menu 8: Tampilkan Mahasiswa Berdasarkan Mata Kuliah
+```cpp
+            case 8:
+                cout << "\n--- Cari mahasiswa berdasarkan mata kuliah ---\n";
+                cout << "Kode mata kuliah: "; getline(cin, kode);
+                tampilkanMahasiswaByMataKuliah(headMahasiswa, kode);
+                break;
+```
+- Lines 110-114: Menampilkan parent (mahasiswa) berdasarkan child tertentu (mata kuliah)
+- Spesifikasi (g): Tampilkan mahasiswa yang mengambil matakuliah tertentu 
+### 14. Menu 9: Tampilkan Mata Kuliah Berdasarkan Mahasiswa
+```cpp
+            case 9:
+                cout << "\n--- Cari mata kuliah berdasarkan mahasiswa ---\n";
+                cout << "NIM Mahasiswa: "; getline(cin, nim);
+                tampilkanMataKuliahByMahasiswa(headMahasiswa, nim);
+                break;
+```
+- Lines 117-121: Menampilkan child (mata kuliah) berdasarkan parent tertentu (mahasiswa)
+- Spesifikasi (h)**: Tampilkan matakuliah yang diambil mahasiswa tertentu 
+
+### 15. Menu 10: Tampilkan Statistik Peminat
+```cpp
+            case 10:
+                tampilkanStatistikPeminat(headMataKuliah);
+                break;
+```
+- Lines 124-126**: Menampilkan statistik jumlah peminat terbanyak dan tersedikit
+- Spesifikasi (i)**: Statistik peminat 
+
+### 16. Menu 11: Keluar
+```cpp
+            case 11:
+                cout << "\nTerima kasih telah menggunakan sistem kami :)\n";
+                break;
+                
+            default:
+                cout << "\nPilihan tidak valid, silakan pilih 1-11!!\n";
+        }
+    } while (pilihan != 11);
+    
+    return 0;
+}
+```
+- Lines 129-139**: Keluar dari program dan menampilkan pesan penutup
+- Main program lengkap**: Fungsi 12 dari 12 fungsionalitas 
+
+---
