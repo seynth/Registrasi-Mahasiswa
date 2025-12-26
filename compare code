@@ -1,0 +1,797 @@
+#include <iostream>
+#include <string>
+#include <limits>
+
+using namespace std;
+
+// =================== STRUKTUR DATA ===================
+// RELASI (M ke N) 
+struct Relasi {
+    struct Mahasiswa* mhs;
+    struct Matakuliah* mk;
+    Relasi* next;
+};
+
+// MAHASISWA (Single Linked List - Insert First, Delete Last)
+struct Mahasiswa {
+    string nim;
+    string nama;
+    int angkatan;
+    Relasi* firstRel;    // Pointer ke list matakuliah yang diambil
+    Mahasiswa* next;
+};
+
+// MATAKULIAH (Double Linked List - Insert Last, Delete First)
+struct Matakuliah {
+    string kode;
+    string nama;
+    int sks;            // 1-24
+    int tingkat;        // 1-4
+    Relasi* firstRel;   // Pointer ke list mahasiswa yang mengambil
+    Matakuliah* next;
+    Matakuliah* prev;
+};
+
+// WRAPPER LIST
+struct ListMhs {
+    Mahasiswa* first;
+    Mahasiswa* last;
+};
+
+struct ListMk {
+    Matakuliah* first;
+    Matakuliah* last;
+};
+
+// =================== PROSEDUR INISIALISASI ===================
+void initListMhs(ListMhs &L) {
+    L.first = L.last = NULL;
+}
+
+void initListMk(ListMk &L) {
+    L.first = L.last = NULL;
+}
+
+// =================== FUNGSI PEMBUAT NODE ===================
+Mahasiswa* createMhs(string nim, string nama, int angkatan) {
+    Mahasiswa* m = new Mahasiswa;
+    m->nim = nim;
+    m->nama = nama;
+    m->angkatan = angkatan;
+    m->firstRel = NULL;
+    m->next = NULL;
+    return m;
+}
+
+Matakuliah* createMk(string kode, string nama, int sks, int tingkat) {
+    Matakuliah* mk = new Matakuliah;
+    mk->kode = kode;
+    mk->nama = nama;
+    mk->sks = sks;
+    mk->tingkat = tingkat;
+    mk->firstRel = NULL;
+    mk->next = NULL;
+    mk->prev = NULL;
+    return mk;
+}
+
+// =================== OPERASI MAHASISWA (SLL) ===================
+// 1. INSERT FIRST untuk Mahasiswa
+void insertFirstMhs(ListMhs &L, Mahasiswa* m) {
+    if (L.first == NULL) {
+        L.first = L.last = m;
+    } else {
+        m->next = L.first;
+        L.first = m;
+    }
+    cout << "Mahasiswa berhasil ditambahkan di awal list!\n";
+}
+
+// 2. SHOW ALL Mahasiswa
+void showAllMhs(ListMhs L) {
+    if (L.first == NULL) {
+        cout << "Data mahasiswa kosong.\n";
+        return;
+    }
+    
+    cout << "\n=== DAFTAR MAHASISWA ===\n";
+    cout << "===============================================\n";
+    cout << "No.  NIM\tNama\t\tAngkatan\n";
+    cout << "===============================================\n";
+    
+    Mahasiswa* curr = L.first;
+    int i = 1;
+    while (curr != NULL) {
+        cout << i << ".   " << curr->nim << "\t" << curr->nama << "\t\t" << curr->angkatan << endl;
+        curr = curr->next;
+        i++;
+    }
+    cout << "===============================================\n";
+    cout << "Total: " << (i-1) << " mahasiswa\n";
+}
+
+// 3. DELETE LAST untuk Mahasiswa (sesuai spesifikasi)
+void deleteLastMhs(ListMhs &L) {
+    if (L.first == NULL) {
+        cout << "Data mahasiswa kosong, tidak ada yang bisa dihapus.\n";
+        return;
+    }
+    
+    if (L.first == L.last) {
+        // Hapus relasi terlebih dahulu
+        delete L.first->firstRel; // sederhana, asumsi relasi sudah dibersihkan
+        delete L.first;
+        L.first = L.last = NULL;
+    } else {
+        Mahasiswa* curr = L.first;
+        while (curr->next != L.last) {
+            curr = curr->next;
+        }
+        // Hapus relasi terlebih dahulu
+        delete curr->next->firstRel;
+        delete L.last;
+        curr->next = NULL;
+        L.last = curr;
+    }
+    cout << "Mahasiswa terakhir berhasil dihapus!\n";
+}
+
+// 4. FIND Mahasiswa by NIM
+Mahasiswa* findMhsByNIM(ListMhs L, string nim) {
+    Mahasiswa* curr = L.first;
+    while (curr != NULL) {
+        if (curr->nim == nim) {
+            return curr;
+        }
+        curr = curr->next;
+    }
+    return NULL;
+}
+
+// =================== OPERASI MATAKULIAH (DLL) ===================
+// 1. INSERT LAST untuk Matakuliah
+void insertLastMk(ListMk &L, Matakuliah* mk) {
+    if (L.first == NULL) {
+        L.first = L.last = mk;
+    } else {
+        L.last->next = mk;
+        mk->prev = L.last;
+        L.last = mk;
+    }
+    cout << "Matakuliah berhasil ditambahkan di akhir list!\n";
+}
+
+// 2. SHOW ALL Matakuliah
+void showAllMk(ListMk L) {
+    if (L.first == NULL) {
+        cout << "Data matakuliah kosong.\n";
+        return;
+    }
+    
+    cout << "\n=== DAFTAR MATAKULIAH ===\n";
+    cout << "=================================================================\n";
+    cout << "No.  Kode\tNama Matakuliah\t\tSKS\tTingkat\n";
+    cout << "=================================================================\n";
+    
+    Matakuliah* curr = L.first;
+    int i = 1;
+    while (curr != NULL) {
+        cout << i << ".   " << curr->kode << "\t" << curr->nama << "\t\t" << curr->sks << "\t" << curr->tingkat << endl;
+        curr = curr->next;
+        i++;
+    }
+    cout << "=================================================================\n";
+    cout << "Total: " << (i-1) << " matakuliah\n";
+}
+
+// 3. DELETE FIRST untuk Matakuliah (sesuai spesifikasi)
+void deleteFirstMk(ListMk &L) {
+    if (L.first == NULL) {
+        cout << "Data matakuliah kosong, tidak ada yang bisa dihapus.\n";
+        return;
+    }
+    
+    if (L.first == L.last) {
+        // Hapus relasi terlebih dahulu
+        delete L.first->firstRel; // sederhana, asumsi relasi sudah dibersihkan
+        delete L.first;
+        L.first = L.last = NULL;
+    } else {
+        Matakuliah* temp = L.first;
+        L.first = L.first->next;
+        L.first->prev = NULL;
+        // Hapus relasi terlebih dahulu
+        delete temp->firstRel;
+        delete temp;
+    }
+    cout << "Matakuliah pertama berhasil dihapus!\n";
+}
+
+// 4. FIND Matakuliah by Kode
+Matakuliah* findMkByKode(ListMk L, string kode) {
+    Matakuliah* curr = L.first;
+    while (curr != NULL) {
+        if (curr->kode == kode) {
+            return curr;
+        }
+        curr = curr->next;
+    }
+    return NULL;
+}
+
+// =================== OPERASI RELASI ===================
+// 1. CEK apakah relasi sudah ada
+bool isRelasiExist(Mahasiswa* mhs, Matakuliah* mk) {
+    Relasi* r = mhs->firstRel;
+    while (r != NULL) {
+        if (r->mk == mk) {
+            return true;
+        }
+        r = r->next;
+    }
+    return false;
+}
+
+// 2. TAMBAH Relasi dari dua sisi
+void addRelasi(Mahasiswa* mhs, Matakuliah* mk) {
+    // Tambah dari sisi Mahasiswa
+    Relasi* r1 = new Relasi;
+    r1->mhs = mhs;
+    r1->mk = mk;
+    r1->next = mhs->firstRel;
+    mhs->firstRel = r1;
+    
+    // Tambah dari sisi Matakuliah
+    Relasi* r2 = new Relasi;
+    r2->mhs = mhs;
+    r2->mk = mk;
+    r2->next = mk->firstRel;
+    mk->firstRel = r2;
+    
+    cout << "Relasi berhasil ditambahkan: " << mhs->nama << " mengambil " << mk->nama << endl;
+}
+
+// 3. HAPUS semua relasi yang melibatkan Mahasiswa tertentu
+void deleteRelasiByMhs(Mahasiswa* mhs) {
+    Relasi* r = mhs->firstRel;
+    while (r != NULL) {
+        // Hapus dari sisi Matakuliah
+        Matakuliah* mk = r->mk;
+        Relasi* prev = NULL;
+        Relasi* curr = mk->firstRel;
+        
+        while (curr != NULL) {
+            if (curr->mhs == mhs) {
+                if (prev == NULL) {
+                    mk->firstRel = curr->next;
+                } else {
+                    prev->next = curr->next;
+                }
+                delete curr;
+                break;
+            }
+            prev = curr;
+            curr = curr->next;
+        }
+        
+        Relasi* temp = r;
+        r = r->next;
+        delete temp;
+    }
+    mhs->firstRel = NULL;
+}
+
+// 4. HAPUS semua relasi yang melibatkan Matakuliah tertentu
+void deleteRelasiByMk(Matakuliah* mk) {
+    Relasi* r = mk->firstRel;
+    while (r != NULL) {
+        // Hapus dari sisi Mahasiswa
+        Mahasiswa* mhs = r->mhs;
+        Relasi* prev = NULL;
+        Relasi* curr = mhs->firstRel;
+        
+        while (curr != NULL) {
+            if (curr->mk == mk) {
+                if (prev == NULL) {
+                    mhs->firstRel = curr->next;
+                } else {
+                    prev->next = curr->next;
+                }
+                delete curr;
+                break;
+            }
+            prev = curr;
+            curr = curr->next;
+        }
+        
+        Relasi* temp = r;
+        r = r->next;
+        delete temp;
+    }
+    mk->firstRel = NULL;
+}
+
+// 5. TAMPILKAN Mahasiswa dengan Matakuliahnya
+void showMhsWithMk(Mahasiswa* mhs) {
+    cout << "\n=== DATA MAHASISWA: " << mhs->nama << " (" << mhs->nim << ") ===\n";
+    cout << "Angkatan: " << mhs->angkatan << endl;
+    cout << "\nMatakuliah yang diambil:\n";
+    cout << "===============================================\n";
+    cout << "No.  Kode\tNama Matakuliah\t\tSKS\tTingkat\n";
+    cout << "===============================================\n";
+    
+    Relasi* r = mhs->firstRel;
+    if (r == NULL) {
+        cout << "Belum mengambil matakuliah.\n";
+        return;
+    }
+    
+    int i = 1, totalSKS = 0;
+    while (r != NULL) {
+        cout << i << ".   " << r->mk->kode << "\t" << r->mk->nama << "\t\t" << r->mk->sks << "\t" << r->mk->tingkat << endl;
+        totalSKS += r->mk->sks;
+        r = r->next;
+        i++;
+    }
+    cout << "===============================================\n";
+    cout << "Total matakuliah: " << (i-1) << " | Total SKS: " << totalSKS << endl;
+}
+
+// 6. TAMPILKAN Matakuliah dengan Mahasiswanya
+void showMkWithMhs(Matakuliah* mk) {
+    cout << "\n=== DATA MATAKULIAH: " << mk->nama << " (" << mk->kode << ") ===\n";
+    cout << "SKS: " << mk->sks << " | Tingkat: " << mk->tingkat << endl;
+    cout << "\nMahasiswa yang mengambil:\n";
+    cout << "=======================================\n";
+    cout << "No.  NIM\tNama\t\tAngkatan\n";
+    cout << "=======================================\n";
+    
+    Relasi* r = mk->firstRel;
+    if (r == NULL) {
+        cout << "Belum ada mahasiswa yang mengambil.\n";
+        return;
+    }
+    
+    int i = 1;
+    while (r != NULL) {
+        cout << i << ".   " << r->mhs->nim << "\t" << r->mhs->nama << "\t\t" << r->mhs->angkatan << endl;
+        r = r->next;
+        i++;
+    }
+    cout << "=======================================\n";
+    cout << "Total mahasiswa: " << (i-1) << endl;
+}
+
+// 7. HITUNG jumlah relasi
+int countRelasiMhs(Mahasiswa* mhs) {
+    int count = 0;
+    Relasi* r = mhs->firstRel;
+    while (r != NULL) {
+        count++;
+        r = r->next;
+    }
+    return count;
+}
+
+int countRelasiMk(Matakuliah* mk) {
+    int count = 0;
+    Relasi* r = mk->firstRel;
+    while (r != NULL) {
+        count++;
+        r = r->next;
+    }
+    return count;
+}
+
+// 8. STATISTIK: Matakuliah dengan peminat terbanyak dan tersedikit
+void showStatistikPeminat(ListMk L) {
+    if (L.first == NULL) {
+        cout << "Data matakuliah kosong, tidak ada statistik.\n";
+        return;
+    }
+    
+    Matakuliah* mostPopular = NULL;
+    Matakuliah* leastPopular = NULL;
+    int maxCount = -1, minCount = 9999;
+    
+    Matakuliah* curr = L.first;
+    while (curr != NULL) {
+        int count = countRelasiMk(curr);
+        
+        if (count > maxCount) {
+            maxCount = count;
+            mostPopular = curr;
+        }
+        
+        if (count < minCount) {
+            minCount = count;
+            leastPopular = curr;
+        }
+        
+        curr = curr->next;
+    }
+    
+    cout << "\n=== STATISTIK PEMINAT MATAKULIAH ===\n";
+    cout << "===============================================\n";
+    
+    cout << "1. PALING BANYAK DIMINATI:\n";
+    if (mostPopular != NULL) {
+        cout << "   Matakuliah: " << mostPopular->nama << " (" << mostPopular->kode << ")\n";
+        cout << "   Jumlah peminat: " << maxCount << " mahasiswa\n";
+        cout << "   SKS: " << mostPopular->sks << " | Tingkat: " << mostPopular->tingkat << endl;
+    }
+    
+    cout << "\n2. PALING SEDIKIT DIMINATI:\n";
+    if (leastPopular != NULL) {
+        cout << "   Matakuliah: " << leastPopular->nama << " (" << leastPopular->kode << ")\n";
+        cout << "   Jumlah peminat: " << minCount << " mahasiswa\n";
+        cout << "   SKS: " << leastPopular->sks << " | Tingkat: " << leastPopular->tingkat << endl;
+    }
+    
+    // Tampilkan semua matakuliah dengan jumlah peminat
+    cout << "\n3. REKAP SELURUH MATAKULIAH:\n";
+    cout << "===============================================\n";
+    cout << "No.  Kode\tNama\t\t\tPeminat\n";
+    cout << "===============================================\n";
+    
+    curr = L.first;
+    int i = 1;
+    while (curr != NULL) {
+        int count = countRelasiMk(curr);
+        cout << i << ".   " << curr->kode << "\t" << curr->nama;
+        if (curr->nama.length() < 16) cout << "\t";
+        cout << "\t" << count << " mahasiswa" << endl;
+        curr = curr->next;
+        i++;
+    }
+    cout << "===============================================\n";
+}
+
+// =================== FUNGSI UTAMA TAMBAHAN ===================
+// 1. DELETE Mahasiswa berdasarkan NIM (lebih realistis)
+void deleteMhsByNIM(ListMhs &L, string nim) {
+    if (L.first == NULL) {
+        cout << "Data mahasiswa kosong.\n";
+        return;
+    }
+    
+    // Cari mahasiswa dengan NIM tersebut
+    Mahasiswa* curr = L.first;
+    Mahasiswa* prev = NULL;
+    
+    while (curr != NULL && curr->nim != nim) {
+        prev = curr;
+        curr = curr->next;
+    }
+    
+    if (curr == NULL) {
+        cout << "Mahasiswa dengan NIM " << nim << " tidak ditemukan.\n";
+        return;
+    }
+    
+    // Hapus semua relasi yang melibatkan mahasiswa ini
+    deleteRelasiByMhs(curr);
+    
+    // Hapus dari list
+    if (prev == NULL) { // Node pertama
+        L.first = curr->next;
+        if (L.first == NULL) L.last = NULL;
+    } else {
+        prev->next = curr->next;
+        if (curr->next == NULL) L.last = prev;
+    }
+    
+    delete curr;
+    cout << "Mahasiswa dengan NIM " << nim << " berhasil dihapus.\n";
+}
+
+// 2. DELETE Matakuliah berdasarkan Kode (lebih realistis)
+void deleteMkByKode(ListMk &L, string kode) {
+    if (L.first == NULL) {
+        cout << "Data matakuliah kosong.\n";
+        return;
+    }
+    
+    // Cari matakuliah dengan kode tersebut
+    Matakuliah* curr = L.first;
+    
+    while (curr != NULL && curr->kode != kode) {
+        curr = curr->next;
+    }
+    
+    if (curr == NULL) {
+        cout << "Matakuliah dengan kode " << kode << " tidak ditemukan.\n";
+        return;
+    }
+    
+    // Hapus semua relasi yang melibatkan matakuliah ini
+    deleteRelasiByMk(curr);
+    
+    // Hapus dari list
+    if (curr->prev == NULL) { // Node pertama
+        L.first = curr->next;
+        if (L.first != NULL) L.first->prev = NULL;
+        else L.last = NULL;
+    } else if (curr->next == NULL) { // Node terakhir
+        L.last = curr->prev;
+        L.last->next = NULL;
+    } else { // Node tengah
+        curr->prev->next = curr->next;
+        curr->next->prev = curr->prev;
+    }
+    
+    delete curr;
+    cout << "Matakuliah dengan kode " << kode << " berhasil dihapus.\n";
+}
+
+// 3. TAMPILKAN semua data dengan relasi lengkap
+void showAllData(ListMhs Lm, ListMk Lk) {
+    cout << "\n=== DATA REGISTRASI LENGKAP ===\n";
+    
+    // Tampilkan semua mahasiswa dengan matakuliahnya
+    Mahasiswa* currMhs = Lm.first;
+    while (currMhs != NULL) {
+        showMhsWithMk(currMhs);
+        currMhs = currMhs->next;
+    }
+}
+
+// =================== FUNGSI BANTU ===================
+void clearScreen() {
+    #ifdef _WIN32
+        system("cls");
+    #else
+        system("clear");
+    #endif
+}
+
+void pressEnterToContinue() {
+    cout << "\nTekan Enter untuk melanjutkan...";
+    cin.ignore();
+    cin.get();
+}
+
+// =================== MAIN PROGRAM ===================
+int main() {
+    ListMhs listMhs;
+    ListMk listMk;
+    
+    initListMhs(listMhs);
+    initListMk(listMk);
+    
+    // Data dummy untuk testing
+    insertFirstMhs(listMhs, createMhs("001", "Budi Santoso", 2022));
+    insertFirstMhs(listMhs, createMhs("002", "Siti Aminah", 2023));
+    insertFirstMhs(listMhs, createMhs("003", "Ahmad Fauzi", 2022));
+    
+    insertLastMk(listMk, createMk("MK001", "Struktur Data", 3, 2));
+    insertLastMk(listMk, createMk("MK002", "Algoritma", 3, 1));
+    insertLastMk(listMk, createMk("MK003", "Basis Data", 3, 2));
+    insertLastMk(listMk, createMk("MK004", "Pemrograman Web", 3, 3));
+    
+    // Relasi dummy
+    Mahasiswa* m1 = findMhsByNIM(listMhs, "001");
+    Mahasiswa* m2 = findMhsByNIM(listMhs, "002");
+    Mahasiswa* m3 = findMhsByNIM(listMhs, "003");
+    
+    Matakuliah* mk1 = findMkByKode(listMk, "MK001");
+    Matakuliah* mk2 = findMkByKode(listMk, "MK002");
+    Matakuliah* mk3 = findMkByKode(listMk, "MK003");
+    Matakuliah* mk4 = findMkByKode(listMk, "MK004");
+    
+    if (m1 && mk1) addRelasi(m1, mk1);
+    if (m1 && mk2) addRelasi(m1, mk2);
+    if (m2 && mk1) addRelasi(m2, mk1);
+    if (m2 && mk3) addRelasi(m2, mk3);
+    if (m3 && mk1) addRelasi(m3, mk1);
+    if (m3 && mk4) addRelasi(m3, mk4);
+    
+    int choice;
+    do {
+        clearScreen();
+        cout << "========================================\n";
+        cout << "   SISTEM REGISTRASI MAHASISWA\n";
+        cout << "   (Multi Linked List - M ke N)\n";
+        cout << "========================================\n";
+        cout << "1. Tambah Mahasiswa (Insert First)\n";
+        cout << "2. Tambah Matakuliah (Insert Last)\n";
+        cout << "3. Tambah Relasi (Mahasiswa ambil Matakuliah)\n";
+        cout << "4. Hapus Mahasiswa terakhir (Delete Last)\n";
+        cout << "5. Hapus Matakuliah pertama (Delete First)\n";
+        cout << "6. Hapus Mahasiswa berdasarkan NIM\n";
+        cout << "7. Hapus Matakuliah berdasarkan Kode\n";
+        cout << "8. Tampilkan semua Mahasiswa\n";
+        cout << "9. Tampilkan semua Matakuliah\n";
+        cout << "10. Tampilkan Mahasiswa dengan Matakuliahnya\n";
+        cout << "11. Tampilkan Mahasiswa yang mengambil Matakuliah tertentu\n";
+        cout << "12. Tampilkan Matakuliah yang diambil Mahasiswa tertentu\n";
+        cout << "13. Statistik Matakuliah (paling banyak/sedikit diminati)\n";
+        cout << "14. Tampilkan semua data lengkap\n";
+        cout << "0. Keluar\n";
+        cout << "========================================\n";
+        cout << "Pilihan: ";
+        cin >> choice;
+        
+        switch(choice) {
+            case 1: {
+                string nim, nama;
+                int angkatan;
+                cout << "\n=== TAMBAH MAHASISWA ===\n";
+                cout << "NIM: "; cin >> nim;
+                cout << "Nama: "; cin.ignore(); getline(cin, nama);
+                cout << "Angkatan: "; cin >> angkatan;
+                
+                if (findMhsByNIM(listMhs, nim)) {
+                    cout << "Error: NIM sudah terdaftar!\n";
+                } else {
+                    insertFirstMhs(listMhs, createMhs(nim, nama, angkatan));
+                }
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 2: {
+                string kode, nama;
+                int sks, tingkat;
+                cout << "\n=== TAMBAH MATAKULIAH ===\n";
+                cout << "Kode MK: "; cin >> kode;
+                cout << "Nama MK: "; cin.ignore(); getline(cin, nama);
+                cout << "SKS (1-24): "; cin >> sks;
+                cout << "Tingkat (1-4): "; cin >> tingkat;
+                
+                if (sks < 1 || sks > 24) {
+                    cout << "Error: SKS harus antara 1-24!\n";
+                } else if (tingkat < 1 || tingkat > 4) {
+                    cout << "Error: Tingkat harus antara 1-4!\n";
+                } else if (findMkByKode(listMk, kode)) {
+                    cout << "Error: Kode MK sudah terdaftar!\n";
+                } else {
+                    insertLastMk(listMk, createMk(kode, nama, sks, tingkat));
+                }
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 3: {
+                string nim, kode;
+                cout << "\n=== TAMBAH RELASI ===\n";
+                cout << "NIM Mahasiswa: "; cin >> nim;
+                cout << "Kode Matakuliah: "; cin >> kode;
+                
+                Mahasiswa* mhs = findMhsByNIM(listMhs, nim);
+                Matakuliah* mk = findMkByKode(listMk, kode);
+                
+                if (!mhs) {
+                    cout << "Error: Mahasiswa tidak ditemukan!\n";
+                } else if (!mk) {
+                    cout << "Error: Matakuliah tidak ditemukan!\n";
+                } else if (isRelasiExist(mhs, mk)) {
+                    cout << "Error: Mahasiswa sudah mengambil matakuliah ini!\n";
+                } else {
+                    addRelasi(mhs, mk);
+                }
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 4: {
+                cout << "\n=== HAPUS MAHASISWA TERAKHIR ===\n";
+                deleteLastMhs(listMhs);
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 5: {
+                cout << "\n=== HAPUS MATAKULIAH PERTAMA ===\n";
+                deleteFirstMk(listMk);
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 6: {
+                string nim;
+                cout << "\n=== HAPUS MAHASISWA BERDASARKAN NIM ===\n";
+                cout << "Masukkan NIM yang akan dihapus: "; cin >> nim;
+                deleteMhsByNIM(listMhs, nim);
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 7: {
+                string kode;
+                cout << "\n=== HAPUS MATAKULIAH BERDASARKAN KODE ===\n";
+                cout << "Masukkan Kode MK yang akan dihapus: "; cin >> kode;
+                deleteMkByKode(listMk, kode);
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 8: {
+                cout << "\n=== DAFTAR MAHASISWA ===\n";
+                showAllMhs(listMhs);
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 9: {
+                cout << "\n=== DAFTAR MATAKULIAH ===\n";
+                showAllMk(listMk);
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 10: {
+                string nim;
+                cout << "\n=== DATA MAHASISWA DENGAN MATAKULIAHNYA ===\n";
+                cout << "Masukkan NIM Mahasiswa: "; cin >> nim;
+                
+                Mahasiswa* mhs = findMhsByNIM(listMhs, nim);
+                if (mhs) {
+                    showMhsWithMk(mhs);
+                } else {
+                    cout << "Mahasiswa tidak ditemukan!\n";
+                }
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 11: {
+                string kode;
+                cout << "\n=== MAHASISWA YANG MENGAMBIL MATAKULIAH TERTENTU ===\n";
+                cout << "Masukkan Kode MK: "; cin >> kode;
+                
+                Matakuliah* mk = findMkByKode(listMk, kode);
+                if (mk) {
+                    showMkWithMhs(mk);
+                } else {
+                    cout << "Matakuliah tidak ditemukan!\n";
+                }
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 12: {
+                string nim;
+                cout << "\n=== MATAKULIAH YANG DIAMBIL MAHASISWA TERTENTU ===\n";
+                cout << "Masukkan NIM Mahasiswa: "; cin >> nim;
+                
+                Mahasiswa* mhs = findMhsByNIM(listMhs, nim);
+                if (mhs) {
+                    showMhsWithMk(mhs);
+                } else {
+                    cout << "Mahasiswa tidak ditemukan!\n";
+                }
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 13: {
+                cout << "\n=== STATISTIK PEMINAT MATAKULIAH ===\n";
+                showStatistikPeminat(listMk);
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 14: {
+                cout << "\n=== DATA LENGKAP REGISTRASI ===\n";
+                showAllData(listMhs, listMk);
+                pressEnterToContinue();
+                break;
+            }
+            
+            case 0: {
+                cout << "\nTerima kasih telah menggunakan program.\n";
+                break;
+            }
+            
+            default: {
+                cout << "\nPilihan tidak valid!\n";
+                pressEnterToContinue();
+                break;
+            }
+        }
+        
+    } while (choice != 0);
+    
+    return 0;
+}
