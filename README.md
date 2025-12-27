@@ -65,6 +65,7 @@ struct Relasi {
 ├── 📄 regmhs.h                    // Header file (deklarasi struktur dan fungsi)
 ├── 📄 README.md                   // Dokumentasi utama ini
 ├── 📄 PENELASAN code baru.txt     // Dokumentasi khusus berisi penjelasan mendetail kode
+├── 📄 Visualisasi gambar.png      // Dokumentasi gambar parent dan child
 └── 📁 compare code lama/          // Folder arsip berisi versi kode sebelumnya
 ```
 
